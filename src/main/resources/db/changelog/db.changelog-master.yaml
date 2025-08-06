@@ -1,0 +1,3 @@
+databaseChangeLog:
+  - include:
+      file: db/migration/create-user-table.yaml

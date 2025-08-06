@@ -1,3 +1,13 @@
 databaseChangeLog:
   - include:
-      file: db/migration/create-user-table.yaml
+      file: db/migration/001-create-users.yaml
+  - include:
+      file: db/migration/002-create-card-status.yaml
+  - include:
+      file: db/migration/003-create-cards.yaml
+  - include:
+      file: db/migration/004-create-transfers.yaml
+  - include:
+      file: db/migration/005-alter-card-number-length.yaml
+  - include:
+      file: db/migration/006-alter-card-status-name-length.yaml

@@ -1,9 +1,0 @@
-databaseChangeLog:
-  - changeSet:
-      id: 006
-      author: SecurityTrip
-      changes:
-        - modifyDataType:
-            tableName: card_status
-            columnName: name
-            newDataType: VARCHAR(7)

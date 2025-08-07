@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 007
+      id: 006
       author: SecurityTrip
       changes:
         - insert:

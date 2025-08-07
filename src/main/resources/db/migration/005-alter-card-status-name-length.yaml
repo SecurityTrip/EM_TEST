@@ -4,6 +4,6 @@ databaseChangeLog:
       author: SecurityTrip
       changes:
         - modifyDataType:
-            tableName: cards
-            columnName: number
-            newDataType: VARCHAR(16)
+            tableName: card_status
+            columnName: name
+            newDataType: VARCHAR(7)

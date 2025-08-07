@@ -58,19 +58,16 @@ components:
           type: string
         password:
           type: string
-        email:
-          type: string
       required:
         - username
         - password
-        - email
 
     RegisterResponse:
       type: object
       properties:
-        userId:
-          type: integer
-        message:
+        accessToken:
+          type: string
+        refreshToken:
           type: string
 
     LoginRequest:
@@ -87,5 +84,7 @@ components:
     LoginResponse:
       type: object
       properties:
-        token:
+        accessToken:
+          type: string
+        refreshToken:
           type: string

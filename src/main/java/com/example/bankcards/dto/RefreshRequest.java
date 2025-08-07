@@ -1,16 +1,7 @@
 package com.example.bankcards.dto;
 
-public class LoginResponse {
-    private String accessToken;
+public class RefreshRequest {
     private String refreshToken;
-
-    public String getAccessToken() {
-        return accessToken;
-    }
-
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
-    }
 
     public String getRefreshToken() {
         return refreshToken;

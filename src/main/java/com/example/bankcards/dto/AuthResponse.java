@@ -1,6 +1,6 @@
 package com.example.bankcards.dto;
 
-public class RegisterResponse {
+public class AuthResponse {
     private String accessToken;
     private String refreshToken;
 

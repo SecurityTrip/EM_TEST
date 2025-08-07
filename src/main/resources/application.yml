@@ -28,5 +28,10 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+jwt:
+  secret: yourSuperSecretKeyForJWTGeneration1234567890
+  access-expiration-ms: 900000          # 15 минут
+  refresh-expiration-ms: 604800000      # 7 дней
+
 server:
   port: 8080

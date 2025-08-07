@@ -1,15 +1,17 @@
 openapi: 3.0.3
 info:
-  title: Bank Card Management API
+  title: Bank Cards User API
   version: 1.0.0
-  description: API для управления банковскими картами, регистрацией и логином пользователей
+  description: API для регистрации, логина и обновления токенов пользователей
+
+servers:
+  - url: http://localhost:8080
+    description: Локальный сервер
 
 paths:
   /user/register:
     post:
       summary: Регистрация пользователя
-      tags:
-        - User
       requestBody:
         required: true
         content:
@@ -18,19 +20,17 @@ paths:
               $ref: '#/components/schemas/RegisterRequest'
       responses:
         '200':
-          description: Успешная регистрация
+          description: Успешная регистрация с выдачей токенов
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RegisterResponse'
+                $ref: '#/components/schemas/AuthResponse'
         '500':
-          description: Внутренняя ошибка сервера
+          description: Ошибка при регистрации
 
   /user/login:
     post:
       summary: Вход пользователя
-      tags:
-        - User
       requestBody:
         required: true
         content:
@@ -39,52 +39,97 @@ paths:
               $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
-          description: Успешный вход
+          description: Успешный вход с выдачей токенов
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
+                $ref: '#/components/schemas/AuthResponse'
         '401':
-          description: Неверные учетные данные
-        '500':
-          description: Внутренняя ошибка сервера
+          description: Неверный логин или пароль
+
+  /user/refresh:
+    post:
+      summary: Обновление JWT токенов
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Успешное обновление токенов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Неверный refresh токен
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     RegisterRequest:
       type: object
       properties:
         username:
           type: string
+          example: user1
         password:
           type: string
+          format: password
+          example: pass1234
+        role:
+          type: string
+          enum:
+            - USER
+            - ADMIN
+          example: USER
       required:
         - username
         - password
-
-    RegisterResponse:
-      type: object
-      properties:
-        accessToken:
-          type: string
-        refreshToken:
-          type: string
+        - role
 
     LoginRequest:
       type: object
       properties:
         username:
           type: string
+          example: user1
         password:
           type: string
+          format: password
+          example: pass1234
       required:
         - username
         - password
 
-    LoginResponse:
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      required:
+        - refreshToken
+
+    AuthResponse:
       type: object
       properties:
         accessToken:
           type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         refreshToken:
           type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      required:
+        - accessToken
+        - refreshToken
+
+security:
+  - BearerAuth: []

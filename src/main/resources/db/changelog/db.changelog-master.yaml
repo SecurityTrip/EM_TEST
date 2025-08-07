@@ -11,3 +11,5 @@ databaseChangeLog:
       file: db/migration/005-alter-card-number-length.yaml
   - include:
       file: db/migration/006-alter-card-status-name-length.yaml
+  - include:
+      file: db/migration/007-insert-card-statuses.yaml

@@ -51,6 +51,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth
                                 .requestMatchers("/user/**").permitAll()
+                                .requestMatchers("/card/create").hasRole("ADMIN")
                                 .requestMatchers(PUBLIC_URLS).permitAll()
                                 .anyRequest().authenticated()
                 )

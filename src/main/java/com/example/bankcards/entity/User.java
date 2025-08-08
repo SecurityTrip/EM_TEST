@@ -20,7 +20,6 @@ public class User {
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Card> cards;
 
-    // Геттеры и сеттеры
 
     public Long getId() {
         return id;

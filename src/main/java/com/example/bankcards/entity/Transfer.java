@@ -24,7 +24,6 @@ public class Transfer {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // Геттеры и сеттеры
 
     public Long getId() {
         return id;

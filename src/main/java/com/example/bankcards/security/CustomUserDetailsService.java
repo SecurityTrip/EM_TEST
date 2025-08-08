@@ -31,15 +31,27 @@ public class CustomUserDetailsService implements UserDetailsService {
         );
     }
 
-    public void saveUser(String username, String encodedPassword) {
+    public void saveUser(String username, String encodedPassword, User.Role role) {
         if (userRepository.findByUsername(username).isPresent()) {
             throw new IllegalArgumentException("Username already taken");
         }
-
         User newUser = new User();
-        newUser.setUsername(username);
-        newUser.setPassword(encodedPassword);
-        newUser.setRole(User.Role.USER);
+        if(role == null){
+            newUser.setUsername(username);
+            newUser.setPassword(encodedPassword);
+            newUser.setRole(User.Role.ADMIN);
+        } else {
+            if(role.equals(User.Role.USER)){
+                newUser.setUsername(username);
+                newUser.setPassword(encodedPassword);
+                newUser.setRole(User.Role.USER);
+            }
+            if(role.equals(User.Role.ADMIN)){
+                newUser.setUsername(username);
+                newUser.setPassword(encodedPassword);
+                newUser.setRole(User.Role.ADMIN);
+            }
+        }
 
         userRepository.save(newUser);
     }

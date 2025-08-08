@@ -30,7 +30,6 @@ public class Card {
     @Column(name = "balance", nullable = false)
     private Long balance = 0L;
 
-    // Геттеры и сеттеры
 
     public Long getId() {
         return id;

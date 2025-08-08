@@ -2,11 +2,10 @@
 
 <h2>Запуск</h2>
 <ul>
-  <li>Поднять БД: <code>docker-compose up -d</code></li>
-  <li>Запуск приложения: <code>mvn spring-boot:run</code></li>
+  <li>Поднять приложение: <code>docker-compose up -d --build</code></li>
   <li>Swagger UI: <code>http://localhost:8080/swagger-ui.html</code></li>
   <li>OpenAPI: <code>http://localhost:8080/v3/api-docs</code></li>
-  <li>Переменные: настройки в <code>application.yml</code> (JWT, шифрование)</li>
+  <li>Переменные: настройки в <code>application.yml</code> (JWT, шифрование и т.д.)</li>
 </ul>
 
 

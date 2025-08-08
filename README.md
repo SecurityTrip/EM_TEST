@@ -1,5 +1,15 @@
 <h1>🚀 Разработка Системы Управления Банковскими Картами</h1>
 
+<h2>Запуск</h2>
+<ul>
+  <li>Поднять БД: <code>docker-compose up -d</code></li>
+  <li>Запуск приложения: <code>mvn spring-boot:run</code></li>
+  <li>Swagger UI: <code>http://localhost:8080/swagger-ui.html</code></li>
+  <li>OpenAPI: <code>http://localhost:8080/v3/api-docs</code></li>
+  <li>Переменные: настройки в <code>application.yml</code> (JWT, шифрование)</li>
+</ul>
+
+
 <h2>📁 Стартовая структура</h2>
   <p>
     Проектная структура с директориями и описательными файлами (<code>README Controller.md</code>, <code>README Service.md</code> и т.д.) уже подготовлена.<br />
@@ -17,14 +27,7 @@
     <li>Переводы между своими картами</li>
   </ul>
 
-<h2>Запуск</h2>
-<ul>
-  <li>Поднять БД: <code>docker-compose up -d</code></li>
-  <li>Запуск приложения: <code>mvn spring-boot:run</code></li>
-  <li>Swagger UI: <code>http://localhost:8080/swagger-ui.html</code></li>
-  <li>OpenAPI: <code>http://localhost:8080/v3/api-docs</code></li>
-  <li>Переменные: настройки в <code>application.yml</code> (JWT, шифрование)</li>
-</ul>
+
 
 <h2>💳 Атрибуты карты</h2>
   <ul>

@@ -25,6 +25,7 @@ import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.hamcrest.Matchers.containsString;
 
 @WebMvcTest(controllers = AdminUserController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -73,6 +74,36 @@ public class AdminUserControllerTest {
         mockMvc.perform(post("/admin/users").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value("user02"));
+    }
+
+    @Test
+    void create_validationError_returns400() throws Exception {
+        // username слишком короткий
+        String body = "{" +
+                "\"username\":\"u\"," +
+                "\"password\":\"123\"," +
+                "\"role\":\"USER\"}";
+        mockMvc.perform(post("/admin/users").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void update_validationError_returns400() throws Exception {
+        // username слишком короткий
+        String body = "{" +
+                "\"username\":\"u\"}";
+        mockMvc.perform(patch("/admin/users/10").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void delete_notFound_returns400() throws Exception {
+        Mockito.doThrow(new IllegalArgumentException("User not found: 404")).when(service).delete(404L);
+        mockMvc.perform(delete("/admin/users/404"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("User not found")));
     }
 
     @Test

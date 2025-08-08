@@ -24,6 +24,7 @@ import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.hamcrest.Matchers.containsString;
 
 @WebMvcTest(controllers = CardController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -123,6 +124,20 @@ public class CardControllerTest {
     }
 
     @Test
+    void blockAdmin_returns200() throws Exception {
+        mockMvc.perform(post("/card/10/block-admin"))
+                .andExpect(status().isOk());
+        Mockito.verify(cardService).blockCardAdmin(10L);
+    }
+
+    @Test
+    void activateAdmin_returns200() throws Exception {
+        mockMvc.perform(post("/card/10/activate"))
+                .andExpect(status().isOk());
+        Mockito.verify(cardService).activateCardAdmin(10L);
+    }
+
+    @Test
     void transfer_returns200() throws Exception {
         String body = "{" +
                 "\"fromCardId\":10," +
@@ -131,6 +146,51 @@ public class CardControllerTest {
         mockMvc.perform(post("/card/transfer").contentType(MediaType.APPLICATION_JSON).content(body).principal(() -> "user1"))
                 .andExpect(status().isOk());
         Mockito.verify(cardService).transfer(Mockito.any(TransferDTO.class), Mockito.eq("user1"));
+    }
+
+    @Test
+    void create_validationError_returns400() throws Exception {
+        // ownerId отсутствует
+        String body = "{" +
+                "\"number\":\"1234567812345678\"," +
+                "\"expiration\":1893456000000," +
+                "\"balance\":1000}";
+        mockMvc.perform(post("/card").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void transfer_validationError_returns400() throws Exception {
+        // amount отсутствует
+        String body = "{" +
+                "\"fromCardId\":10," +
+                "\"toCardId\":20}";
+        mockMvc.perform(post("/card/transfer").contentType(MediaType.APPLICATION_JSON).content(body).principal(() -> "user1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void getById_forbidden_maps403() throws Exception {
+        Mockito.when(cardService.getCardById(Mockito.eq(99L), Mockito.anyString()))
+                .thenThrow(new SecurityException("Access denied: Card does not belong to user"));
+
+        mockMvc.perform(get("/card/99").principal(() -> "user1"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message", containsString("Access denied")));
+    }
+
+    @Test
+    void getById_badRequest_maps400() throws Exception {
+        Mockito.when(cardService.getCardById(Mockito.eq(1000L), Mockito.anyString()))
+                .thenThrow(new IllegalArgumentException("Card not found: 1000"));
+
+        mockMvc.perform(get("/card/1000").principal(() -> "user1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message", containsString("Card not found")));
     }
 }
 

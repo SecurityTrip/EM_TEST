@@ -26,6 +26,9 @@ import java.util.Date;
 public class CardService {
 
     private static final Logger logger = LoggerFactory.getLogger(CardService.class);
+    private static final String STATUS_ACTIVE = "ACTIVE";
+    private static final String STATUS_BLOCKED = "BLOCKED";
+    private static final String STATUS_EXPIRED = "EXPIRED";
 
     private final CardRepository cardRepository;
     private final UserRepository userRepository;
@@ -48,32 +51,16 @@ public class CardService {
         logger.info("Creating card for ownerId: {}", cardDTO.getOwnerId());
         Card card = new Card();
         card.setNumber(cardEncryptor.encrypt(cardDTO.getNumber()));
-
-        User owner = userRepository.findById(cardDTO.getOwnerId())
-                .orElseThrow(() -> {
-                    logger.error("User not found: {}", cardDTO.getOwnerId());
-                    return new IllegalArgumentException("User not found: " + cardDTO.getOwnerId());
-                });
-        card.setOwner(owner);
-
+        card.setOwner(requireUserById(cardDTO.getOwnerId()));
         card.setExpiration(cardDTO.getExpiration());
         card.setBalance(cardDTO.getBalance());
 
-        CardStatus activeStatus = cardStatusRepository.findByName("ACTIVE")
-                .orElseThrow(() -> {
-                    logger.error("Card status ACTIVE not found");
-                    return new IllegalArgumentException("Card status ACTIVE not found");
-                });
-        card.setStatus(activeStatus);
-
+        // Установка статуса
+        CardStatus targetStatus = requireStatus(STATUS_ACTIVE);
         if (cardDTO.getExpiration().before(new Date())) {
-            CardStatus expiredStatus = cardStatusRepository.findByName("EXPIRED")
-                    .orElseThrow(() -> {
-                        logger.error("Card status EXPIRED not found");
-                        return new IllegalArgumentException("Card status EXPIRED not found");
-                    });
-            card.setStatus(expiredStatus);
+            targetStatus = requireStatus(STATUS_EXPIRED);
         }
+        card.setStatus(targetStatus);
 
         Card savedCard = cardRepository.save(card);
         // Маскируем только для ответа, не перетирая значение в сущности
@@ -85,11 +72,7 @@ public class CardService {
     @Transactional(readOnly = true)
     public Page<CardResponse> getCards(String status, String owner, Pageable pageable, String username) {
         logger.info("Fetching cards for user: {}, status: {}, owner: {}", username, status, owner);
-        User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> {
-                    logger.error("User not found: {}", username);
-                    return new IllegalArgumentException("User not found: " + username);
-                });
+        User currentUser = requireUserByUsername(username);
 
         boolean isAdmin = currentUser.getRole() == User.Role.ADMIN;
         Page<Card> cards;
@@ -97,30 +80,14 @@ public class CardService {
         if (isAdmin) {
             // ADMIN может фильтровать по статусу и владельцу
             if (status != null && owner != null) {
-                User filterOwner = userRepository.findByUsername(owner)
-                        .orElseThrow(() -> {
-                            logger.error("User not found: {}", owner);
-                            return new IllegalArgumentException("User not found: " + owner);
-                        });
-                CardStatus filterStatus = cardStatusRepository.findByName(status)
-                        .orElseThrow(() -> {
-                            logger.error("Status not found: {}", status);
-                            return new IllegalArgumentException("Status not found: " + status);
-                        });
+                User filterOwner = requireUserByUsername(owner);
+                CardStatus filterStatus = requireStatus(status);
                 cards = cardRepository.findByStatusAndOwner(filterStatus, filterOwner, pageable);
             } else if (status != null) {
-                CardStatus filterStatus = cardStatusRepository.findByName(status)
-                        .orElseThrow(() -> {
-                            logger.error("Status not found: {}", status);
-                            return new IllegalArgumentException("Status not found: " + status);
-                        });
+                CardStatus filterStatus = requireStatus(status);
                 cards = cardRepository.findByStatus(filterStatus, pageable);
             } else if (owner != null) {
-                User filterOwner = userRepository.findByUsername(owner)
-                        .orElseThrow(() -> {
-                            logger.error("User not found: {}", owner);
-                            return new IllegalArgumentException("User not found: " + owner);
-                        });
+                User filterOwner = requireUserByUsername(owner);
                 cards = cardRepository.findByOwner(filterOwner, pageable);
             } else {
                 cards = cardRepository.findAll(pageable);
@@ -128,11 +95,7 @@ public class CardService {
         } else {
             // USER видит только свои карты
             if (status != null) {
-                CardStatus filterStatus = cardStatusRepository.findByName(status)
-                        .orElseThrow(() -> {
-                            logger.error("Status not found: {}", status);
-                            return new IllegalArgumentException("Status not found: " + status);
-                        });
+                CardStatus filterStatus = requireStatus(status);
                 cards = cardRepository.findByOwnerAndStatus(currentUser, filterStatus, pageable);
             } else {
                 cards = cardRepository.findByOwner(currentUser, pageable);
@@ -147,17 +110,9 @@ public class CardService {
     @Transactional(readOnly = true)
     public CardResponse getCardById(Long id, String username) {
         logger.info("Fetching card with ID: {} for user: {}", id, username);
-        Card card = cardRepository.findById(id)
-                .orElseThrow(() -> {
-                    logger.error("Card not found: {}", id);
-                    return new IllegalArgumentException("Card not found: " + id);
-                });
+        Card card = requireCardById(id);
 
-        User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> {
-                    logger.error("User not found: {}", username);
-                    return new IllegalArgumentException("User not found: " + username);
-                });
+        User currentUser = requireUserByUsername(username);
 
         if (currentUser.getRole() != User.Role.ADMIN && !card.getOwner().getId().equals(currentUser.getId())) {
             logger.error("Access denied: Card {} does not belong to user {}", id, username);
@@ -172,28 +127,16 @@ public class CardService {
     @Transactional
     public CardResponse updateCard(Long id, @Valid CardDTO cardDTO) {
         logger.info("Updating card with ID: {}", id);
-        Card card = cardRepository.findById(id)
-                .orElseThrow(() -> {
-                    logger.error("Card not found: {}", id);
-                    return new IllegalArgumentException("Card not found: " + id);
-                });
+        Card card = requireCardById(id);
 
         card.setNumber(cardEncryptor.encrypt(cardDTO.getNumber()));
-        User owner = userRepository.findById(cardDTO.getOwnerId())
-                .orElseThrow(() -> {
-                    logger.error("User not found: {}", cardDTO.getOwnerId());
-                    return new IllegalArgumentException("User not found: " + cardDTO.getOwnerId());
-                });
+        User owner = requireUserById(cardDTO.getOwnerId());
         card.setOwner(owner);
         card.setExpiration(cardDTO.getExpiration());
         card.setBalance(cardDTO.getBalance());
 
         if (cardDTO.getExpiration().before(new Date())) {
-            CardStatus expiredStatus = cardStatusRepository.findByName("EXPIRED")
-                    .orElseThrow(() -> {
-                        logger.error("Card status EXPIRED not found");
-                        return new IllegalArgumentException("Card status EXPIRED not found");
-                    });
+            CardStatus expiredStatus = requireStatus(STATUS_EXPIRED);
             card.setStatus(expiredStatus);
         }
 
@@ -206,11 +149,7 @@ public class CardService {
     @Transactional
     public void deleteCard(Long id) {
         logger.info("Deleting card with ID: {}", id);
-        Card card = cardRepository.findById(id)
-                .orElseThrow(() -> {
-                    logger.error("Card not found: {}", id);
-                    return new IllegalArgumentException("Card not found: " + id);
-                });
+        Card card = requireCardById(id);
         cardRepository.delete(card);
         logger.info("Card deleted with ID: {}", id);
     }
@@ -219,22 +158,10 @@ public class CardService {
     public void transfer(@Valid TransferDTO transferDTO, String username) {
         logger.info("Initiating transfer from card {} to card {} for user: {}",
                 transferDTO.getFromCardId(), transferDTO.getToCardId(), username);
-        User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> {
-                    logger.error("User not found: {}", username);
-                    return new IllegalArgumentException("User not found: " + username);
-                });
+        User currentUser = requireUserByUsername(username);
 
-        Card fromCard = cardRepository.findById(transferDTO.getFromCardId())
-                .orElseThrow(() -> {
-                    logger.error("From card not found: {}", transferDTO.getFromCardId());
-                    return new IllegalArgumentException("From card not found: " + transferDTO.getFromCardId());
-                });
-        Card toCard = cardRepository.findById(transferDTO.getToCardId())
-                .orElseThrow(() -> {
-                    logger.error("To card not found: {}", transferDTO.getToCardId());
-                    return new IllegalArgumentException("To card not found: " + transferDTO.getToCardId());
-                });
+        Card fromCard = requireCardById(transferDTO.getFromCardId());
+        Card toCard = requireCardById(transferDTO.getToCardId());
 
         // Проверка, что обе карты принадлежат текущему пользователю
         if (!fromCard.getOwner().getId().equals(currentUser.getId()) ||
@@ -244,11 +171,7 @@ public class CardService {
         }
 
         // Проверка статуса карт
-        CardStatus activeStatus = cardStatusRepository.findByName("ACTIVE")
-                .orElseThrow(() -> {
-                    logger.error("Card status ACTIVE not found");
-                    return new IllegalArgumentException("Card status ACTIVE not found");
-                });
+        CardStatus activeStatus = requireStatus(STATUS_ACTIVE);
         if (!fromCard.getStatus().getName().equals("ACTIVE") ||
                 !toCard.getStatus().getName().equals("ACTIVE")) {
             logger.error("Transfer failed: Both cards must be active");
@@ -282,11 +205,7 @@ public class CardService {
     @Transactional
     public void requestBlock(Long id, String username) {
         logger.info("Requesting block for card {} by user: {}", id, username);
-        Card card = cardRepository.findById(id)
-                .orElseThrow(() -> {
-                    logger.error("Card not found: {}", id);
-                    return new IllegalArgumentException("Card not found: " + id);
-                });
+        Card card = requireCardById(id);
 
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> {
@@ -299,16 +218,12 @@ public class CardService {
             throw new SecurityException("Access denied: Card does not belong to user");
         }
 
-        if (!card.getStatus().getName().equals("ACTIVE")) {
+        if (!card.getStatus().getName().equals(STATUS_ACTIVE)) {
             logger.error("Block failed: Card {} is already blocked or expired", id);
             throw new IllegalStateException("Card is already blocked or expired");
         }
 
-        CardStatus blockedStatus = cardStatusRepository.findByName("BLOCKED")
-                .orElseThrow(() -> {
-                    logger.error("Card status BLOCKED not found");
-                    return new IllegalArgumentException("Card status BLOCKED not found");
-                });
+        CardStatus blockedStatus = requireStatus(STATUS_BLOCKED);
         card.setStatus(blockedStatus);
         cardRepository.save(card);
         logger.info("Card {} blocked successfully", id);
@@ -317,10 +232,8 @@ public class CardService {
     @Transactional
     public void blockCardAdmin(Long id) {
         logger.info("Admin blocking card {}", id);
-        Card card = cardRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Card not found: " + id));
-        CardStatus blockedStatus = cardStatusRepository.findByName("BLOCKED")
-                .orElseThrow(() -> new IllegalArgumentException("Card status BLOCKED not found"));
+        Card card = requireCardById(id);
+        CardStatus blockedStatus = requireStatus(STATUS_BLOCKED);
         card.setStatus(blockedStatus);
         cardRepository.save(card);
         logger.info("Card {} blocked by admin", id);
@@ -329,12 +242,43 @@ public class CardService {
     @Transactional
     public void activateCardAdmin(Long id) {
         logger.info("Admin activating card {}", id);
-        Card card = cardRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Card not found: " + id));
-        CardStatus activeStatus = cardStatusRepository.findByName("ACTIVE")
-                .orElseThrow(() -> new IllegalArgumentException("Card status ACTIVE not found"));
+        Card card = requireCardById(id);
+        CardStatus activeStatus = requireStatus(STATUS_ACTIVE);
         card.setStatus(activeStatus);
         cardRepository.save(card);
         logger.info("Card {} activated by admin", id);
+    }
+
+    // Helpers
+    private User requireUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> {
+                    logger.error("User not found by username: {}", username);
+                    return new IllegalArgumentException("User not found: " + username);
+                });
+    }
+
+    private User requireUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    logger.error("User not found by id: {}", userId);
+                    return new IllegalArgumentException("User not found: " + userId);
+                });
+    }
+
+    private Card requireCardById(Long cardId) {
+        return cardRepository.findById(cardId)
+                .orElseThrow(() -> {
+                    logger.error("Card not found: {}", cardId);
+                    return new IllegalArgumentException("Card not found: " + cardId);
+                });
+    }
+
+    private CardStatus requireStatus(String statusName) {
+        return cardStatusRepository.findByName(statusName)
+                .orElseThrow(() -> {
+                    logger.error("Status not found: {}", statusName);
+                    return new IllegalArgumentException("Status not found: " + statusName);
+                });
     }
 }

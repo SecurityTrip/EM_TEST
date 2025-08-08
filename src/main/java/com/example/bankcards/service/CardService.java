@@ -1,6 +1,7 @@
 package com.example.bankcards.service;
 
 import com.example.bankcards.dto.CardDTO;
+import com.example.bankcards.dto.CardResponse;
 import com.example.bankcards.dto.TransferDTO;
 import com.example.bankcards.entity.Card;
 import com.example.bankcards.entity.CardStatus;
@@ -43,7 +44,7 @@ public class CardService {
     }
 
     @Transactional
-    public Card createCard(@Valid CardDTO cardDTO) {
+    public CardResponse createCard(@Valid CardDTO cardDTO) {
         logger.info("Creating card for ownerId: {}", cardDTO.getOwnerId());
         Card card = new Card();
         card.setNumber(cardEncryptor.encrypt(cardDTO.getNumber()));
@@ -75,12 +76,14 @@ public class CardService {
         }
 
         Card savedCard = cardRepository.save(card);
+        // Маскируем только для ответа, не перетирая значение в сущности
+        String masked = cardEncryptor.maskCardNumber(savedCard.getNumber());
         logger.info("Card created with ID: {}", savedCard.getId());
-        return savedCard;
+        return com.example.bankcards.util.CardMapper.toResponse(savedCard, masked);
     }
 
     @Transactional(readOnly = true)
-    public Page<Card> getCards(String status, String owner, Pageable pageable, String username) {
+    public Page<CardResponse> getCards(String status, String owner, Pageable pageable, String username) {
         logger.info("Fetching cards for user: {}, status: {}, owner: {}", username, status, owner);
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> {
@@ -137,13 +140,12 @@ public class CardService {
         }
 
         // Маскирование номеров карт
-        cards.getContent().forEach(card -> card.setNumber(cardEncryptor.maskCardNumber(card.getNumber())));
         logger.info("Returning {} cards for user: {}", cards.getTotalElements(), username);
-        return cards;
+        return cards.map(c -> com.example.bankcards.util.CardMapper.toResponse(c, cardEncryptor.maskCardNumber(c.getNumber())));
     }
 
     @Transactional(readOnly = true)
-    public Card getCardById(Long id, String username) {
+    public CardResponse getCardById(Long id, String username) {
         logger.info("Fetching card with ID: {} for user: {}", id, username);
         Card card = cardRepository.findById(id)
                 .orElseThrow(() -> {
@@ -162,13 +164,13 @@ public class CardService {
             throw new SecurityException("Access denied: Card does not belong to user");
         }
 
-        card.setNumber(cardEncryptor.maskCardNumber(card.getNumber()));
+        String masked = cardEncryptor.maskCardNumber(card.getNumber());
         logger.info("Returning card with ID: {}", id);
-        return card;
+        return com.example.bankcards.util.CardMapper.toResponse(card, masked);
     }
 
     @Transactional
-    public Card updateCard(Long id, @Valid CardDTO cardDTO) {
+    public CardResponse updateCard(Long id, @Valid CardDTO cardDTO) {
         logger.info("Updating card with ID: {}", id);
         Card card = cardRepository.findById(id)
                 .orElseThrow(() -> {
@@ -196,8 +198,9 @@ public class CardService {
         }
 
         Card updatedCard = cardRepository.save(card);
+        String masked = cardEncryptor.maskCardNumber(updatedCard.getNumber());
         logger.info("Card updated with ID: {}", id);
-        return updatedCard;
+        return com.example.bankcards.util.CardMapper.toResponse(updatedCard, masked);
     }
 
     @Transactional
@@ -309,5 +312,29 @@ public class CardService {
         card.setStatus(blockedStatus);
         cardRepository.save(card);
         logger.info("Card {} blocked successfully", id);
+    }
+
+    @Transactional
+    public void blockCardAdmin(Long id) {
+        logger.info("Admin blocking card {}", id);
+        Card card = cardRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Card not found: " + id));
+        CardStatus blockedStatus = cardStatusRepository.findByName("BLOCKED")
+                .orElseThrow(() -> new IllegalArgumentException("Card status BLOCKED not found"));
+        card.setStatus(blockedStatus);
+        cardRepository.save(card);
+        logger.info("Card {} blocked by admin", id);
+    }
+
+    @Transactional
+    public void activateCardAdmin(Long id) {
+        logger.info("Admin activating card {}", id);
+        Card card = cardRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Card not found: " + id));
+        CardStatus activeStatus = cardStatusRepository.findByName("ACTIVE")
+                .orElseThrow(() -> new IllegalArgumentException("Card status ACTIVE not found"));
+        card.setStatus(activeStatus);
+        cardRepository.save(card);
+        logger.info("Card {} activated by admin", id);
     }
 }

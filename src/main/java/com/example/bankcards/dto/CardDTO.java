@@ -1,12 +1,22 @@
 package com.example.bankcards.dto;
 
 import java.util.Date;
+import jakarta.validation.constraints.*;
 
 public class CardDTO {
 
+    @NotBlank
+    @Pattern(regexp = "\\d{16}", message = "Card number must be 16 digits")
     private String number;
+
+    @NotNull
     private Long ownerId;
+
+    @NotNull
     private Date expiration;
+
+    @NotNull
+    @PositiveOrZero
     private Long balance;
 
     // Геттеры и сеттеры

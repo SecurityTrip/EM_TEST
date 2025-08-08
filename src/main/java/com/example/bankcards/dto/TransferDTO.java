@@ -2,8 +2,12 @@ package com.example.bankcards.dto;
 
 public class TransferDTO {
 
+    @jakarta.validation.constraints.NotNull
     private Long fromCardId;
+    @jakarta.validation.constraints.NotNull
     private Long toCardId;
+    @jakarta.validation.constraints.NotNull
+    @jakarta.validation.constraints.Positive
     private Long amount;
 
     // Геттеры и сеттеры

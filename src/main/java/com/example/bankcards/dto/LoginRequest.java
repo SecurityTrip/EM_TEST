@@ -1,7 +1,9 @@
 package com.example.bankcards.dto;
 
 public class LoginRequest {
+    @jakarta.validation.constraints.NotBlank
     private String username;
+    @jakarta.validation.constraints.NotBlank
     private String password;
 
     public String getPassword() {

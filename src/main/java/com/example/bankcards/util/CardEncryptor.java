@@ -93,7 +93,8 @@ public class CardEncryptor {
             return masked;
         } catch (Exception e) {
             logger.error("Failed to mask card number: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to mask card number: " + e.getMessage(), e);
+            // Возвращаем безопасную маску, не падаем 500
+            return "**** **** **** ****";
         }
     }
 }

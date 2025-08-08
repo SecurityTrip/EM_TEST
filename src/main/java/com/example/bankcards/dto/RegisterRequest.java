@@ -1,10 +1,18 @@
 package com.example.bankcards.dto;
 
 import com.example.bankcards.entity.User;
+import jakarta.validation.constraints.*;
 
 public class RegisterRequest {
+    @NotBlank
+    @Size(min = 3, max = 50)
     private String username;
+
+    @NotBlank
+    @Size(min = 6, max = 100)
     private String password;
+
+    @NotNull
     private User.Role role;
 
     public String getUsername() {

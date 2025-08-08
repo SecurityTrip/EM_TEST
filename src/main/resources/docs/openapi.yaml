@@ -104,25 +104,27 @@ components:
     CardDTO:
       type: object
       properties:
-        cardNumber:
+        number:
           type: string
-          description: Полный номер карты для создания или обновления (будет зашифрован)
+          description: Полный номер карты (16 цифр), будет зашифрован
           example: "1234567812345678"
-        owner:
-          type: string
-          example: John Doe
-        expiryDate:
+        ownerId:
+          type: integer
+          format: int64
+          description: Идентификатор владельца (пользователя)
+          example: 1
+        expiration:
           type: string
           format: date
           example: 2026-12-31
         balance:
           type: number
-          format: double
+          format: int64
           example: 1000.00
       required:
-        - cardNumber
-        - owner
-        - expiryDate
+        - number
+        - ownerId
+        - expiration
         - balance
     TransferDTO:
       type: object
@@ -232,7 +234,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /card/create:
+  /card:
     post:
       summary: Создание новой карты
       operationId: createCard
@@ -245,7 +247,7 @@ paths:
             schema:
               $ref: '#/components/schemas/CardDTO'
       responses:
-        '200':
+        '201':
           description: Карта успешно создана
           content:
             application/json:
@@ -265,7 +267,73 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
       security:
         - BearerAuth: []
-  /card/read:
+  /admin/users:
+    get:
+      summary: Список пользователей (только ADMIN)
+      tags: [Users]
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Список пользователей
+    post:
+      summary: Создать пользователя (только ADMIN)
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Создан пользователь
+  /admin/users/{id}:
+    patch:
+      summary: Обновить пользователя (только ADMIN)
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                password: { type: string }
+                role: { type: string, enum: [USER, ADMIN] }
+      responses:
+        '200':
+          description: Обновлено
+    delete:
+      summary: Удалить пользователя (только ADMIN)
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204':
+          description: Удалено
     get:
       summary: Получение списка карт с пагинацией и фильтрацией
       operationId: readCards
@@ -320,12 +388,46 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
       security:
         - BearerAuth: []
-  /card/update:
+  /card/{id}:
+    get:
+      summary: Получение карты по ID
+      operationId: getCardById
+      tags:
+        - Cards
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Карта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        '403':
+          description: Доступ запрещён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - BearerAuth: []
     patch:
       summary: Обновление карты
       operationId: updateCard
       tags:
         - Cards
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
       requestBody:
         required: true
         content:
@@ -353,7 +455,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
       security:
         - BearerAuth: []
-  /card/delete:
     delete:
       summary: Удаление карты
       operationId: deleteCard
@@ -361,13 +462,13 @@ paths:
         - Cards
       parameters:
         - name: id
-          in: query
+          in: path
           required: true
           schema:
             type: integer
             format: int64
       responses:
-        '200':
+        '204':
           description: Карта успешно удалена
         '400':
           description: Неверный идентификатор карты
@@ -414,7 +515,7 @@ paths:
         - BearerAuth: []
   /card/{id}/block:
     post:
-      summary: Запрос на блокировку карты
+      summary: Запрос на блокировку карты пользователем
       operationId: requestBlockCard
       tags:
         - Cards
@@ -427,7 +528,7 @@ paths:
             format: int64
       responses:
         '200':
-          description: Запрос на блокировку успешно отправлен
+          description: Карта заблокирована
         '400':
           description: Неверный идентификатор карты
           content:
@@ -436,6 +537,54 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: Доступ запрещён (требуется роль USER)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - BearerAuth: []
+  /card/{id}/block-admin:
+    post:
+      summary: Блокировка карты администратором
+      operationId: blockCardAdmin
+      tags:
+        - Cards
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Карта заблокирована
+        '403':
+          description: Доступ запрещён (требуется роль ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - BearerAuth: []
+  /card/{id}/activate:
+    post:
+      summary: Активация карты администратором
+      operationId: activateCardAdmin
+      tags:
+        - Cards
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Карта активирована
+        '403':
+          description: Доступ запрещён (требуется роль ADMIN)
           content:
             application/json:
               schema:
